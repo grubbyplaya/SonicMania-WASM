@@ -1,8 +1,8 @@
 var _cacheName = 'sonicmania-9282022';
 var _cacheFiles = [
-	'RSDKv5.html',
-	'RSDKv5.js',
-	'RSDKv5.wasm'
+	'RSDKv5U.html',
+	'RSDKv5U.js',
+	'RSDKv5U.wasm'
 ];
 	
 self.addEventListener('install', (e) => {

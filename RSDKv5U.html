@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+
+<title>Sonic Mania</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+button, input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: 0;
+    border-radius: 5px;
+    padding: 11px 22px;
+    color: white;
+    background: #087bd5;
+    font-weight: bold;
+    transition: background .2s;
+}
+
+button:hover {
+    background: #1399ff;
+}
+
+button.secondary {
+    background: #333;
+}
+
+button.danger {
+    background: #b52d36;
+}
+
+button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+#canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #000;
+}
+
+#game {
+    position: fixed;
+    inset: 0;
+    display: none;
+    background: #000;
+}
+
+#launcher {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 10;
+}
+
+.panel {
+    width: 100%;
+    max-width: 520px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 10px 50px #000;
+}
+
+.subtitle {
+    color: #999;
+    margin-bottom: 28px;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.actions button {
+    width: 100%;
+}
+
+#status {
+    color: #aaa;
+    margin-top: 20px;
+    font-size: 13px;
+}
+
+#progress {
+    width: 100%;
+    margin-top: 12px;
+    accent-color: #168cff;
+}
+
+#spinner {
+    width: 30px;
+    height: 30px;
+    margin: 15px auto;
+    border: 4px solid #444;
+    border-top-color: #168cff;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    display: none;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+#filemanager {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: #080808;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.fm-inner {
+    max-width: 850px;
+    margin: auto;
+}
+
+.fm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.fm-header h2 {
+    margin: 0;
+}
+
+.fm-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.file-list {
+    border: 1px solid #333;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    background: #151515;
+    border-bottom: 1px solid #333;
+}
+
+.file-row:last-child {
+    border-bottom: 0;
+}
+
+.file-info {
+    min-width: 0;
+    text-align: left;
+}
+
+.file-name {
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.file-meta {
+    font-size: 11px;
+    color: #888;
+    margin-top: 5px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.file-actions button {
+    padding: 7px 10px;
+    font-size: 11px;
+}
+
+.empty {
+    padding: 35px 15px;
+    color: #888;
+}
+
+.section-title {
+    color: #168cff;
+    margin: 25px 0 10px;
+    text-align: left;
+}
+
+.notice {
+    padding: 13px;
+    background: #191919;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 20px;
+}
+
+#output {
+    display: none;
+    width: 100%;
+    height: 150px;
+    background: #000;
+    color: #ddd;
+    border: 1px solid #333;
+    margin-top: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media(max-width: 500px) {
+    .panel {
+        padding: 20px;
+    }
+
+    .logo {
+        font-size: 34px;
+    }
+
+    .file-row {
+        align-items: flex-start;
+    }
+
+    .file-actions {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- GAME CANVAS -->
+
+<div id="game">
+    <canvas id="canvas"
+        tabindex="-1"
+        oncontextmenu="event.preventDefault()">
+    </canvas>
+</div>
+
+<!-- LAUNCHER -->
+
+<div id="launcher">
+    <div class="panel">
+        <div class="actions">
+            <button id="startButton" onclick="startGame()" disabled>
+                Start Game
+            </button>
+
+            <button class="secondary" onclick="openManager()">
+                File Manager
+            </button>
+
+            <button class="secondary" onclick="document.getElementById('gameFile').click()">
+                Import Data.RSDK file
+            </button>
+        </div>
+
+        <input type="file" id="gameFile" accept=".rsdk" hidden>
+
+        <div id="spinner"></div>
+
+        <div id="status">
+            Initializing storage...
+        </div>
+
+        <progress id="progress" value="0" max="100" hidden></progress>
+    </div>
+</div>
+
+<!-- FILE MANAGER -->
+
+<div id="filemanager" class="hidden">
+
+    <div class="fm-inner">
+
+        <div class="fm-header">
+            <h2>File Manager</h2>
+            <button class="secondary" onclick="closeManager()">
+                Back
+            </button>
+        </div>
+
+        <div class="fm-toolbar">
+
+            <button onclick="document.getElementById('importFile').click()">
+                Import Files
+            </button>
+
+            <button class="secondary" onclick="exportAll()">
+                Export All
+            </button>
+
+            <button class="secondary" onclick="refreshFiles()">
+                Refresh
+            </button>
+
+        </div>
+
+        <input type="file" id="importFile" multiple hidden>
+
+        <h3 class="section-title">Game Data</h3>
+
+        <div class="file-list" id="gameFiles">
+            <div class="empty">Loading files...</div>
+        </div>
+
+        <button class="danger" style="margin-top:20px"
+            onclick="clearStorage()">
+            Delete All Files
+        </button>
+
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const DB_NAME = "SonicManiaStandalone";
+const DB_VERSION = 1;
+
+let database = null;
+let runtimeReady = false;
+let gameStarted = false;
+
+const statusElement = document.getElementById("status");
+const spinnerElement = document.getElementById("spinner");
+const progressElement = document.getElementById("progress");
+
+function setStatus(message) {
+    statusElement.textContent = message;
+}
+
+function setLoading(active) {
+    spinnerElement.style.display = active ? "block" : "none";
+}
+
+function openDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains("files")) {
+                db.createObjectStore("files", {
+                    keyPath: "path"
+                });
+            }
+        };
+
+        request.onsuccess = () => {
+            database = request.result;
+            resolve(database);
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function storeFile(path, file) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("files", "readwrite");
+
+        transaction.objectStore("files").put({
+            path: path,
+            name: path.split("/").pop(),
+            blob: file,
+            size: file.size,
+            modified: Date.now()
+        });
+
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+    });
+}
+
+function getAllFiles() {
+    return new Promise((resolve, reject) => {
+        const request = database.transaction("files").objectStore("files").getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function deleteFile(path) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("files", "readwrite");
+
+        transaction.objectStore("files").delete(path);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+    });
+}
+
+document.getElementById("gameFile").addEventListener("change", async event => {
+
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.name !== "Data.rsdk") {
+            alert("Please select the file named Data.rsdk.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setStatus("Importing Data.rsdk...");
+
+            await storeFile("/Data.rsdk", file);
+            await updateLauncher();
+            await refreshFiles();
+            setStatus("");
+            await loadGameEngine();
+        } catch (error) {
+            console.error(error);
+            setStatus("Game data import failed.");
+            alert(error.message);
+        }
+
+        setLoading(false);
+        event.target.value = "";
+    }
+);
+
+document.getElementById("importFile").addEventListener("change", async event => {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
+        setLoading(true);
+
+        try {
+            for (const file of files) {
+                const isMod = file.webkitRelativePath ? file.webkitRelativePath.toLowerCase().includes("mods/") : false;
+                const path = isMod ? "/mods/" + file.name : "/" + file.name;
+
+                await storeFile(path, file);
+            }
+
+            setStatus("Files imported successfully.");
+            await refreshFiles();
+        } catch (error) {
+            console.error(error);
+            alert("File import failed.");
+        }
+
+        setLoading(false);
+        event.target.value = "";
+    }
+);
+
+
+function openManager() {
+    document.getElementById("launcher").classList.add("hidden");
+    document.getElementById("filemanager").classList.remove("hidden");
+    refreshFiles();
+}
+
+function closeManager() {
+    document.getElementById("filemanager").classList.add("hidden");
+    document.getElementById("launcher").classList.remove("hidden");
+    updateLauncher();
+}
+
+async function refreshFiles() {
+    const files = await getAllFiles();
+    const gameFiles = files.filter(f => !f.path.startsWith("/mods/"));
+    const modFiles = files.filter(f => f.path.startsWith("/mods/"));
+
+    renderFiles("gameFiles", gameFiles);
+}
+
+function renderFiles(elementId, files) {
+    const container = document.getElementById(elementId);
+    container.replaceChildren();
+
+    if (!files.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No files found.";
+        container.appendChild(empty);
+        return;
+    }
+
+    files.forEach(file => {
+        const row = document.createElement("div");
+        row.className = "file-row";
+
+        const info = document.createElement("div");
+        info.className = "file-info";
+
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = file.name;
+
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        meta.textContent = file.path + " · " + (file.size / 1024).toFixed(1) + " KB";
+
+        info.append(name, meta);
+
+        const actions = document.createElement("div");
+        actions.className = "file-actions";
+
+        const download = document.createElement("button");
+        download.textContent = "Download";
+        download.onclick = () => downloadFile(file);
+
+        const remove = document.createElement("button");
+        remove.className = "danger";
+        remove.textContent = "Delete";
+        remove.onclick = () => removeFile(file.path);
+
+        actions.append(download, remove);
+        row.append(info, actions);
+        container.appendChild(row);
+
+    });
+}
+
+async function removeFile(path) {
+    if (!confirm("Delete " + path + "?")) return;
+    await deleteFile(path);
+    await refreshFiles();
+    updateLauncher();
+}
+
+function downloadFile(file) {
+    const url = URL.createObjectURL(file.blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = file.name;
+    link.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function exportAll() {
+    const files = await getAllFiles();
+    if (!files.length) {
+        alert("There are no files to export.");
+        return;
+    }
+
+    for (const file of files) {
+        downloadFile(file);
+    }
+
+}
+
+async function clearStorage() {
+    if (!confirm("Are you sure you want to delete every file?")) {
+        return;
+    }
+
+    const files = await getAllFiles();
+    for (const file of files) {
+        await deleteFile(file.path);
+    }
+
+    await refreshFiles();
+    updateLauncher();
+}
+
+async function updateLauncher() {
+    const files = await getAllFiles();
+    const gameData = files.find(file => file.path === "/Data.rsdk");
+
+    document.getElementById("startButton").disabled = !gameData;
+
+    if (gameData) {
+        setStatus("Ready...");
+    } else {
+        setStatus("Import Data.rsdk from your copy of Sonic Mania.");
+    }
+
+}
+
+let runtimeLoading = false;
+
+async function loadGameEngine() {
+    if (runtimeLoading || runtimeReady) return;
+
+    const files = await getAllFiles();
+    const gameData = files.find(file => file.path === "/Data.rsdk");
+
+    if (!gameData) {
+        setStatus("Data.rsdk is required.");
+        return;
+    }
+
+    runtimeLoading = true;
+    setLoading(true);
+    setStatus("Setting up the game...");
+
+    try {
+        const rsdkBytes = new Uint8Array(await gameData.blob.arrayBuffer());
+        console.log("Data.rsdk loaded:", rsdkBytes.length, "bytes");
+
+        if (!Array.isArray(Module.preRun)) {
+            Module.preRun = Module.preRun ? [Module.preRun] : [];
+        }
+
+        Module.preRun.push(function() {
+            const fs = Module.FS || window.FS;
+            if (!fs || !window.IDBFS) {
+                throw new Error("IDBFS is unavailable.");
+            }
+
+            try {
+                fs.mkdir("/idbfs");
+            } catch (e) {}
+
+            fs.mount(IDBFS, {}, "/idbfs");
+            fs.syncfs(true, function(error) {
+                if (error) {
+                    console.error("IDBFS restore failed:", error);
+                    return;
+                }
+
+                try {
+                    const exists = fs.analyzePath("/idbfs/Data.rsdk").exists;
+                    if (!exists) {
+                        fs.writeFile("/idbfs/Data.rsdk", rsdkBytes);
+                    }
+
+                    try {
+                        fs.mkdir("/idbfs/mods");
+                    } catch (e) {}
+
+                    fs.syncfs(false, function(saveError) {
+                        if (saveError) {
+                            console.error("Initial save failed:", saveError);
+                        }
+                    });
+
+                } catch (e) {
+                    console.error("Filesystem initialization failed:", e);
+                }
+            });
+        });
+
+        const script = document.createElement("script");
+        script.src = "./RSDKv5U.js";
+        script.onload = function() {
+            console.log("RSDKv5U.js loaded.");
+        };
+
+        script.onerror = function() {
+            runtimeLoading = false;
+            setLoading(false);
+            setStatus("Failed to load RSDKv5U.js.");
+            console.error("RSDK engine failed to load.");
+        };
+
+        document.body.appendChild(script);
+
+    } catch (error) {
+
+        runtimeLoading = false;
+        setLoading(false);
+        console.error(error);
+        setStatus("The Retro Engine is taking a nap. Hold out, Retro Engine!");
+        throw error;
+    }
+}
+
+let autoSaveTimer = null;
+let autoSaveInProgress = false;
+let autoSavePending = false;
+
+function autoSave() {
+    if (!runtimeReady) return;
+
+    const fs = Module.FS || window.FS;
+
+    if (!fs || !fs.syncfs) return;
+
+    if (autoSaveInProgress) {
+        autoSavePending = true;
+        return;
+    }
+
+    autoSaveInProgress = true;
+
+    fs.syncfs(false, function(error) {
+        autoSaveInProgress = false;
+
+        if (error) {
+            console.error("Auto-save failed:", error);
+        }
+
+        if (autoSavePending) {
+            autoSavePending = false;
+            autoSave();
+        }
+    });
+}
+
+function startAutoSave() {
+    if (autoSaveTimer) return;
+
+    autoSaveTimer = setInterval(function() {
+        if (gameStarted) {
+            autoSave();
+        }
+    }, 15000);
+}
+
+function stopAutoSave() {
+    if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+        autoSaveTimer = null;
+    }
+}
+
+/* =====================================
+   GAME EXECUTION
+===================================== */
+
+async function startGame() {
+
+    if (!runtimeReady) {
+        alert("The Retro Engine is taking a nap. Hold out, Retro Engine!");
+        return;
+    }
+
+    if (gameStarted) return;
+
+    try {
+        const fs = Module.FS || window.FS;
+        if (!fs) {
+            throw new Error("Game filesystem unavailable.");
+        }
+
+        const exists = fs.analyzePath("/idbfs/Data.rsdk").exists;
+
+        if (!exists) {
+            throw new Error("Data.rsdk is missing.");
+        }
+
+        document.getElementById("launcher").classList.add("hidden");
+        document.getElementById("game").style.display = "block";
+
+        gameStarted = true;
+        startAutoSave();
+        window.focus();
+        Module._main();
+    } catch (error) {
+        console.error(error);
+        gameStarted = false;
+        document.getElementById("game").style.display = "none";
+        document.getElementById("launcher").classList.remove("hidden");
+        alert("Unable to start game: " + error.message);
+
+    }
+}
+
+var Module = {
+    arguments: [""],
+    noInitialRun: true,
+    preRun: [],
+    postRun: [],
+    canvas: document.getElementById("canvas"),
+    print: function(text) {
+        console.log(text);
+    },
+
+    printErr: function(text) {
+        console.error(text);
+    },
+
+    setStatus: function(text) {
+        statusElement.textContent = text;
+        const match = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+
+        if (match) {
+            progressElement.hidden = false;
+            progressElement.value = Number(match[2]);
+            progressElement.max = Number(match[4]);
+            setLoading(true);
+        } else {
+            progressElement.hidden = true;
+            if (text === "All downloads complete.") {
+                setLoading(false);
+            }
+        }
+    },
+
+    monitorRunDependencies: function(left) {
+        this.totalDependencies = Math.max(this.totalDependencies || 0, left);
+        this.setStatus(
+            left ? "Preparing... (" + (this.totalDependencies - left) + "/" + this.totalDependencies + ")" : "All downloads complete."
+        );
+
+    },
+
+    onRuntimeInitialized: function() {
+        console.log("RSDK Initialized. Everything's a go!");
+
+        runtimeReady = true;
+        runtimeLoading = false;
+
+        setLoading(false);
+        setStatus("Ready... Go!");
+        updateLauncher();
+    }
+
+};
+
+Module.canvas.addEventListener(
+    "webglcontextlost",
+    event => {
+        event.preventDefault();
+        alert("WebGL context lost. Reload the page to continue.");
+    },
+    false
+);
+
+window.onerror = function(message, source, line, column, error) {
+    console.error(message, source, line, column, error);
+    setLoading(false);
+    setStatus("An error occurred. Check the browser console.");
+};
+
+window.addEventListener("beforeunload", event => {
+    if (database) {
+        event.preventDefault();
+        event.returnValue = "";
+    }
+});
+
+(async function initialize() {
+    try {
+        setLoading(true);
+        await openDatabase();
+        await updateLauncher();
+
+        const files = await getAllFiles();
+        if (files.some(file => file.path === "/Data.rsdk")) {
+            await loadGameEngine();
+        }
+
+        setStatus("Storage initialized.");
+
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(console.warn);
+        }
+    } catch (error) {
+        console.error(error);
+        setStatus("Unable to initialize browser storage.");
+    } finally {
+        setLoading(false);
+    }
+})();
+
+document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "hidden") {
+        autoSave();
+    }
+});
+
+window.addEventListener("pagehide", function() {
+    autoSave();
+});
+
+</script>
+
+</body>
+</html>
