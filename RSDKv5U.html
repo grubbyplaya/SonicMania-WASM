@@ -6,6 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 
 <title>Sonic Mania</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
 
 <style>
 * {
@@ -282,16 +283,12 @@ button:disabled {
 
 <body>
 
-<!-- GAME CANVAS -->
-
 <div id="game">
     <canvas id="canvas"
         tabindex="-1"
         oncontextmenu="event.preventDefault()">
     </canvas>
 </div>
-
-<!-- LAUNCHER -->
 
 <div id="launcher">
     <div class="panel">
@@ -320,8 +317,6 @@ button:disabled {
         <progress id="progress" value="0" max="100" hidden></progress>
     </div>
 </div>
-
-<!-- FILE MANAGER -->
 
 <div id="filemanager" class="hidden">
 
